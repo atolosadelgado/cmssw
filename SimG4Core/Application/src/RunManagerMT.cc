@@ -73,7 +73,8 @@ RunManagerMT::RunManagerMT(edm::ParameterSet const& p)
       m_pPhysics(p.getParameter<edm::ParameterSet>("Physics")),
       m_pRunAction(p.getParameter<edm::ParameterSet>("RunAction")),
       m_Init(p.getParameter<edm::ParameterSet>("Init")),
-      m_G4Commands(p.getParameter<std::vector<std::string> >("G4Commands")) {
+      m_G4Commands(p.getParameter<std::vector<std::string> >("G4Commands")),
+      m_EnableHGCalSubregions(p.getUntrackedParameter<bool>("EnableHGCalSubregions", false)){
   m_physicsList.reset(nullptr);
   m_world.reset(nullptr);
   m_runInterface.reset(nullptr);
@@ -140,6 +141,9 @@ void RunManagerMT::initG4(const DDCompactView* pDD,
   m_registry.dddWorldSignal_(m_world.get());
   m_stateManager->SetNewState(G4State_PreInit);
 
+  if (m_EnableHGCalSubregions) {
+    addRegions();
+  }
   // Create physics list
   edm::LogVerbatim("SimG4CoreApplication") << "RunManagerMT: create PhysicsList";
 
@@ -201,9 +205,6 @@ void RunManagerMT::initG4(const DDCompactView* pDD,
     }
   }
 
-  if (m_check) {
-    addRegions();
-  }
   setupVoxels();
 
   m_stateManager->SetNewState(G4State_Init);
@@ -367,6 +368,112 @@ void RunManagerMT::runForPhase2() {
 // This method should be extended in order to add new regions via names of logical volume
 // and to add a new production cuts for these regions
 void RunManagerMT::addRegions() {
+  struct mat_cut_couple_t{
+    // Constructor with 1 cut delegates to ctor with cut per particle
+    mat_cut_couple_t(std::string imatname, std::string ilvname_pattern, double icut_mm)
+        : mat_cut_couple_t(std::move(imatname), std::move(ilvname_pattern),
+                           icut_mm, icut_mm, icut_mm) {}
+
+    // Constructor with cuts per particle
+    mat_cut_couple_t(std::string imatname, std::string ilvname_pattern,
+                     double icutg_mm, double icute_mm, double icutp_mm)
+        : matname(std::move(imatname)),
+          lvname_pattern(std::move(ilvname_pattern)),
+          cutg_mm(icutg_mm), cute_mm(icute_mm), cutp_mm(icutp_mm) {}
+    std::string matname;
+    std::string lvname_pattern;
+    double cutg_mm;
+    double cute_mm;
+    double cutp_mm;
+  };
+  std::vector<mat_cut_couple_t> mat_cut_couple_vector = {
+    // list of material, logical volume regex and cut (in mm)
+    // global cut, if exact regex, material is ignored
+    {"global","HGCal",3},
+    // common materials to EE and HE
+    {"Epoxy","^HGCal.*",0.1},
+    {"HGC_G10-FR4","^HGCal.*",0.1},
+    {"Silicon","^HGCal.*",0.03},
+    //EE cuts
+    {"Kapton","^HGCalEEKapton.*",0.1},
+    {"WCu","^HGCal.*",0.3},
+    {"Lead","^HGCal.*",2},
+    {"StainlessSteel","^HGCalEEAbsorberStainlessSteel.*",0.1},
+    {"HGC_EEConnector","^HGCal.*",0.1},
+    {"Copper","^HGCalEEAbsorberCopper.*",0.1},
+    {"Copper","^HGCalEECoolingPlate.*",3},
+    //HE cuts
+    {"Polystyrene","^HGCalScintillator.*",0.03},
+    {"H_Scintillator","^HGCalHEScintillatorSensitive.*",0.03},
+    {"Kapton","^HGCalHEKapton.*",0.03},
+    {"Copper","^HGCalHECoolingPlate.*",3},
+    {"HGC_HEConnector","^HGCal.*",0.1},
+    {"StainlessSteel","^HGCalHESteelCover.*",2},
+    {"StainlessSteel","^HGCalHEAbsorber.*",41.5},
+    {"StainlessSteel","^HGCalBackPlate.*",100},
+  };
+
+  /// this lambda function creates a region a given couple material-regex of lvname
+  auto createG4Region = [&](const mat_cut_couple_t & couple)->void {
+    // set new cuts for existing HGCal envelope region
+    if("global" == couple.matname)
+    {
+      // retrieve existing region
+      // if it does not exist, G4 throws JustWarning G4Exception
+	    G4Region * rg = G4RegionStore::GetInstance()->GetRegion("HGCalRegion");
+        G4ProductionCuts * HGCalmatcuts = rg->GetProductionCuts();
+        // Set cut values (in mm)
+        HGCalmatcuts->SetProductionCut(couple.cutg_mm * CLHEP::mm, G4ProductionCuts::GetIndex("gamma"));
+        HGCalmatcuts->SetProductionCut(couple.cute_mm * CLHEP::mm, G4ProductionCuts::GetIndex("e-"));
+        HGCalmatcuts->SetProductionCut(couple.cute_mm * CLHEP::mm, G4ProductionCuts::GetIndex("e+"));
+        HGCalmatcuts->SetProductionCut(couple.cutp_mm * CLHEP::mm, G4ProductionCuts::GetIndex("proton"));
+	    return;
+    }
+    // existing method addG4Region requires vector with ptr to logical volumes and cuts
+    // the mat_cut_couple_t object contains material name and a regex of lv name
+    // 1. Retrieve pointer to material
+    const G4Material * mat_ptr = G4Material::GetMaterial(couple.matname);
+    if(! mat_ptr)
+    {
+      std::string error_message = std::string("Input material <")
+                                + couple.matname
+                                + "> does not exist\nIn function: "
+                                + __PRETTY_FUNCTION__;
+      throw std::runtime_error(error_message);
+    }
+    // 2. Identify lv by regex of its name
+    std::regex lvname_pattern_rg(couple.lvname_pattern);
+
+    // 2.1 Accumulate ptr of lv in a vector
+    std::vector<G4LogicalVolume*> lv_vector;
+
+    // 2.2 Loop over the lv store and append to vector lv if material & name regex match
+    G4LogicalVolumeStore * lv_store = G4LogicalVolumeStore::GetInstance();
+    for (const auto& lv : *lv_store)
+    {
+        if( (lv->GetMaterial() == mat_ptr) && std::regex_match( lv->GetName(), lvname_pattern_rg) )
+            lv_vector.push_back(lv);
+    }
+
+    // 3. Create unique region name
+    std::string rg_name = "HGCalRegion_" + couple.matname + "_" + couple.lvname_pattern;
+
+    // 4. Pass the vector with lv, region name and cuts to the method to create the region
+    this->addG4Region(lv_vector,
+                      rg_name,
+                      couple.cutg_mm * CLHEP::mm,
+                      couple.cute_mm * CLHEP::mm,
+                      couple.cute_mm * CLHEP::mm,
+                      couple.cutp_mm * CLHEP::mm
+                      );
+  };
+  //---------------- end of createG4Region
+
+  // iterate over all the material-lv regex name cut couples
+  for( auto & mc : mat_cut_couple_vector)
+    createG4Region(mc);
+
+  // Dump each lv and its assigned region and cuts
   CMSG4RegionReporter rep;
   rep.ReportRegions("g4region.txt");
 }

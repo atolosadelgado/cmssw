@@ -673,6 +673,7 @@ g4SimHits = cms.EDProducer("OscarMTProducer",
         TimeSliceUnit   = cms.double(1),
         IgnoreTrackID   = cms.bool(False),
     ),
+    EnableHGCalSubregions = cms.untracked.bool(False),
 )
 ##
 ## Change the HFShowerLibrary file from Run 2
