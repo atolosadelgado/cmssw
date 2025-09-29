@@ -127,6 +127,7 @@ private:
   std::unique_ptr<DDDWorld> m_world;
   SimActivityRegistry m_registry;
   SensitiveDetectorCatalog m_catalog;
+  bool m_EnableHGCalSubregions;
 };
 
 #endif
