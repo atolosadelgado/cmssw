@@ -311,8 +311,8 @@ void CMSEmStandardPhysics::ConstructProcess() {
       config->SetMSCRangeFactor(fRangeFactor, rname);
       config->SetMSCSafetyFactor(fSafetyFactor, rname);
 
-      config->SetWoodcockTrackingRegion(rname);
-      config->SetWDTEnergyLimit(0.5 * CLHEP::MeV);
+      //config->SetWoodcockTrackingRegion(rname);
+      //config->SetWDTEnergyLimit(0.5 * CLHEP::MeV);
     }
 
     G4Electron::Electron()->SetTrackingManager(hepEmTM);
