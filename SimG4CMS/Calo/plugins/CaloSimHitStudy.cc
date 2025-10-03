@@ -20,6 +20,7 @@
 #include "DataFormats/HcalDetId/interface/HcalDetId.h"
 #include "DataFormats/HcalDetId/interface/HcalSubdetector.h"
 #include "DataFormats/HcalDetId/interface/HcalTestNumbering.h"
+#include "DataFormats/ForwardDetId/interface/ForwardSubdetector.h"
 
 #include "SimDataFormats/CaloHit/interface/PCaloHit.h"
 #include "SimDataFormats/CaloHit/interface/PCaloHitContainer.h"
@@ -33,6 +34,7 @@
 #include "Geometry/HcalTowerAlgo/interface/HcalGeometry.h"
 #include "Geometry/HcalCommonData/interface/HcalDDDRecConstants.h"
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
+#include "Geometry/HGCalGeometry/interface/HGCalGeometry.h"
 
 #include <TH1F.h>
 
@@ -44,6 +46,27 @@
 #include <string>
 
 //#define EDM_ML_DEBUG
+
+namespace test
+{
+  struct WelfordBin {
+    double mean = 0.0;
+    double M2 = 0.0;
+    unsigned int n = 0;
+
+    void add(double x) {
+      n++;
+      double delta = x - mean;
+      mean += delta / n;
+      double delta2 = x - mean;
+      M2 += delta * delta2;
+    }
+
+    double variance() const { return (n > 1) ? M2 / (n - 1) : 0.0; }
+    double error() const { return (n > 0) ? std::sqrt(variance() / n) : 0.0; }
+  };
+};
+
 
 class CaloSimHitStudy : public edm::one::EDAnalyzer<edm::one::WatchRuns, edm::one::SharedResources> {
 public:
@@ -97,6 +120,8 @@ private:
   TH1F *edepC_[nCalo_], *edepT_[nCalo_], *eta_[nCalo_], *phi_[nCalo_];
   TH1F *hitMu, *hitHigh, *hitLow, *eneInc_, *etaInc_, *phiInc_, *ptInc_;
   TH1F *hitTk_[nTrack_], *edepTk_[nTrack_], *tofTk_[nTrack_];
+  TH1F *edepHGCal;
+  std::vector<test::WelfordBin> welfordBins;
 };
 
 CaloSimHitStudy::CaloSimHitStudy(const edm::ParameterSet& ps)
@@ -288,7 +313,10 @@ CaloSimHitStudy::CaloSimHitStudy(const edm::ParameterSet& ps)
     edepTk_[i]->GetXaxis()->SetTitle(title);
     edepTk_[i]->GetYaxis()->SetTitle("Hits");
   }
-#ifdef EDM_ML_DEBUG
+  sprintf(name, "hHGCaledep");
+  edepHGCal = tfile->make<TH1F>(name, "HGCal longitudinal profile;Z(mm);E(MeV)", 1e5, 0., 30000.);
+  welfordBins.resize(edepHGCal->GetNbinsX());
+  #ifdef EDM_ML_DEBUG
   edm::LogVerbatim("HitStudy") << "CaloSimHitStudy: Completed defining histos for SimHit objects";
 #endif
 }
@@ -329,7 +357,7 @@ void CaloSimHitStudy::analyze(edm::Event const& e, edm::EventSetup const& set) {
   etaInc_->Fill(etaInc);
   phiInc_->Fill(phiInc);
 
-  std::vector<PCaloHit> ebHits, eeHits, hcHits;
+  std::vector<PCaloHit> ebHits, eeHits, hcHits,hgcalHits;
   for (unsigned int i = 0; i < toks_calo_.size(); i++) {
     bool getHits = false;
     const edm::Handle<edm::PCaloHitContainer>& hitsCalo = e.getHandle(toks_calo_[i]);
@@ -351,6 +379,15 @@ void CaloSimHitStudy::analyze(edm::Event const& e, edm::EventSetup const& set) {
       edm::LogVerbatim("HitStudy") << "CaloSimHitStudy: Hit buffer " << caloHits.size();
 #endif
       analyzeHits(caloHits, i);
+      // Alvaro, adding this for HGCal
+      for (const auto& hit : *hitsCalo) {
+        DetId id(hit.id());
+        if (id.subdetId() == ForwardSubdetector::HGCEE  ||
+            id.subdetId() == ForwardSubdetector::HGCHEF ||
+            id.subdetId() == ForwardSubdetector::HGCHEB    )
+          hgcalHits.push_back(hit);
+
+      }
     }
   }
   analyzeHits(ebHits, eeHits, hcHits);
@@ -385,6 +422,65 @@ void CaloSimHitStudy::analyze(edm::Event const& e, edm::EventSetup const& set) {
   }
   unsigned int nhtkl = tkLowHits.size();
   hitLow->Fill(double(nhtkl));
+
+  // Alvaro
+  // accumulate energy deposited in the HGCal during this event
+  TH1F* edepHGCal_tmp = (TH1F*)this->edepHGCal->Clone("edepHGCal_tmp");
+  // avoid double delete
+  edepHGCal_tmp->SetDirectory(0);
+  // prepare event histogram
+  edepHGCal_tmp->Reset();
+
+  const HGCalGeometry* hgcalGeomEE =
+      static_cast<const HGCalGeometry*>(caloGeometry_->getSubdetectorGeometry(DetId::HGCalEE, 0));
+    // static_cast<const HGCalGeometry*>(caloGeometry_->getSubdetectorGeometry(DetId::Forward, ForwardSubdetector::HGCEE));
+
+  const HGCalGeometry* hgcalGeomHEF =
+      static_cast<const HGCalGeometry*>(caloGeometry_->getSubdetectorGeometry(DetId::HGCalHSi, 0));
+    // static_cast<const HGCalGeometry*>(caloGeometry_->getSubdetectorGeometry(DetId::Forward, ForwardSubdetector::HGCHEF));
+
+  const HGCalGeometry* hgcalGeomHEB =
+    static_cast<const HGCalGeometry*>(caloGeometry_->getSubdetectorGeometry(DetId::HGCalHSc, 0));
+    // static_cast<const HGCalGeometry*>(caloGeometry_->getSubdetectorGeometry(DetId::Forward, ForwardSubdetector::HGCHEB));
+
+  std::cout << "Dabadaba... " << hgcalGeomEE << '\t' << hgcalGeomHEF << '\t' << hgcalGeomHEB  << std::endl;
+
+
+  for (const auto& hit : hgcalHits) {
+    DetId id(hit.id());
+    GlobalPoint pos; // caloGeometry_->getPosition(id);
+    if (id.subdetId() == ForwardSubdetector::HGCEE && hgcalGeomEE) {
+      pos = hgcalGeomEE->getPosition(id);
+    } else if (id.subdetId() == ForwardSubdetector::HGCHEF && hgcalGeomHEF) {
+      pos = hgcalGeomHEF->getPosition(id);
+    } else if (id.subdetId() == ForwardSubdetector::HGCHEB && hgcalGeomHEB) {
+      pos = hgcalGeomHEB->getPosition(id);
+    } else {
+      std::cout << "Skipping event, no subdetector id valid...\n" << std::endl;
+      continue; // if id not valid
+    }
+
+    // GlobalPoint are in cm, convert to mm
+    double z_offset = - 11.1e3;
+    double zpos_mm = std::fabs(pos.z()) * 10 /*+ z_offset*/;
+    // Convert energy to MeV
+    double E_MeV = hit.energy()*1000.;
+    edepHGCal_tmp->Fill(zpos_mm, E_MeV);
+      std::cout << "\t filling hgcal histo... " <<  zpos_mm << std::endl;
+
+  }
+  // update edepHGCal using online Welford algorithm
+  int nbins = edepHGCal->GetNbinsX();
+  for (int i = 1; i <= nbins; ++i) {
+    double E = edepHGCal_tmp->GetBinContent(i);
+    welfordBins[i-1].add(E);
+
+    // update edepHGCal;
+    // TODO: investigate how to place it at the end of the run
+    edepHGCal->SetBinContent(i, welfordBins[i-1].mean);
+    edepHGCal->SetBinError(i, welfordBins[i-1].error());
+  }
+
 }
 
 void CaloSimHitStudy::analyzeHits(std::vector<PCaloHit>& hits, int indx) {
