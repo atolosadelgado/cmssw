@@ -13,6 +13,9 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Utilities/interface/isFinite.h"
 
+#include "G4EventManager.hh"
+#include "SimG4Core/Application/interface/Phase2EventAction.h"
+
 Phase2SteppingAction::Phase2SteppingAction(const CMSSteppingVerbose* sv,
                                            const edm::ParameterSet& p,
                                            bool hasW,
@@ -144,7 +147,27 @@ void Phase2SteppingAction::UserSteppingAction(const G4Step* aStep) {
     // next logical volume and next region
     const G4LogicalVolume* lv = postStep->GetPhysicalVolume()->GetLogicalVolume();
     const G4Region* theRegion = lv->GetRegion();
+    if ( std::string(theRegion->GetName()).find("HGCalRegion") != std::string::npos)
+    {
+        Phase2EventAction * eventAction =
+        static_cast<Phase2EventAction*>(G4EventManager::GetEventManager()->GetUserEventAction());
 
+    if (eventAction) {
+        double edep_MeV= aStep->GetTotalEnergyDeposit() / CLHEP::MeV;
+        if(0<edep_MeV)
+        {
+          G4ThreeVector avestep_position = 0.5*(preStep->GetPosition()+postStep->GetPosition());
+          double z_mm = avestep_position.z() / CLHEP::mm;
+          double zabs_mm = std::fabs(z_mm);
+          eventAction->Update_HGCaleprofile(zabs_mm, edep_MeV);
+        }
+
+    }
+      // std::cout << "\tDabadaba  Track #" << theTrack->GetTrackID() << " " << theTrack->GetDefinition()->GetParticleName()
+      //     << " E(MeV)= " << preStep->GetKineticEnergy() / CLHEP::MeV << " Nstep= " << theTrack->GetCurrentStepNumber()
+      //     << " is killed due to limit on number of steps;/n  PV: " << preStep->GetPhysicalVolume()->GetName() << " at "
+      //     << theTrack->GetPosition() << " StepLen(mm)= " << aStep->GetStepLength();
+    }
     // kill in dead regions
     if (isInsideDeadRegion(theRegion))
       tstat = sDeadRegion;
