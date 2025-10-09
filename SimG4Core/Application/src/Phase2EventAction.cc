@@ -33,7 +33,10 @@ Phase2EventAction::Phase2EventAction(const edm::ParameterSet& p,
         hNprimaries = std::make_unique<TH1D>("hNprimaries","hNprimaries", 10000,0,10000);
         hNprimaries->SetDirectory(0);
 
-        hNprimariesTime = std::make_unique<TH2F>("hNprimariesTime","hNprimariesTime", 200,0,1000,200,0,100000);
+        // hNprimariesTime = std::make_unique<TH2F>("hNprimariesTime","hNprimariesTime", 200,0,1000,200,0,100000);
+        hNprimariesTime = std::make_unique<TGraph>();
+        hNprimariesTime->SetName("hNprimariesTime");
+        hNprimariesTime->SetTitle("hNprimariesTime");
 
       }
 
@@ -68,7 +71,8 @@ void Phase2EventAction::EndOfEventAction(const G4Event* anEvent) {
   hNprimaries->Fill(nPrimaries);
   auto end_time = std::chrono::steady_clock::now();
   double duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-  hNprimariesTime->Fill(nPrimaries,duration_ms);
+  // hNprimariesTime->Fill(nPrimaries,duration_ms);
+  hNprimariesTime->AddPoint(nPrimaries,duration_ms);
 
 
   if (1 == nevents) {

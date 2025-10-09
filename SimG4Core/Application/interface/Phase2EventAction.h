@@ -25,7 +25,7 @@ class BeginOfEvent;
 class EndOfEvent;
 class CMSSteppingVerbose;
 #include "TH1D.h"
-#include "TH2F.h"
+#include "TGraph.h"
 #include "TFile.h"
 #include <memory>
 #include <chrono>
@@ -61,7 +61,7 @@ private:
   std::unique_ptr<TH1D> hEhgcal_average;
   std::unique_ptr<TH1D> hEhgcal_1evt;
   std::unique_ptr<TH1D> hNprimaries;
-  std::unique_ptr<TH2F> hNprimariesTime;
+  std::unique_ptr<TGraph> hNprimariesTime;
   int nevents={0};
   std::chrono::steady_clock::time_point start_time;
 };
