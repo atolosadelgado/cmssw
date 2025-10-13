@@ -25,6 +25,12 @@ class BeginOfEvent;
 class EndOfEvent;
 class CMSSteppingVerbose;
 
+#include "TH1D.h"
+#include "TGraph.h"
+#include "TFile.h"
+#include <memory>
+#include <chrono>
+
 class Phase2EventAction : public G4UserEventAction {
 public:
   explicit Phase2EventAction(const edm::ParameterSet& ps, SimRunInterface*, SimTrackManager*, CMSSteppingVerbose*);
@@ -44,6 +50,8 @@ public:
 
   Phase2EventAction(const Phase2EventAction&) = delete;
   const Phase2EventAction& operator=(const Phase2EventAction&) = delete;
+  void Update_HGCaleprofile(double zpos_mm, double edep_MeV);
+  void IncreaseSecondaryParticleCounter(){++nsecondaries;}
 
 private:
   SimRunInterface* m_runInterface;
@@ -52,6 +60,14 @@ private:
   std::string m_stopFile;
   bool m_printRandom;
   bool m_debug;
+  std::unique_ptr<TH1D> hEhgcal_average;
+  std::unique_ptr<TH1D> hEhgcal_1evt;
+  std::unique_ptr<TH1D> hNprimaries;
+  std::unique_ptr<TH1D> hNsecondaries;
+  std::unique_ptr<TGraph> hNprimariesTime;
+  int nevents={0};
+  int nsecondaries={0};
+  std::chrono::steady_clock::time_point start_time;
 };
 
 #endif

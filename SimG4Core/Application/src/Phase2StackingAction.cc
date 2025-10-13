@@ -18,6 +18,10 @@
 #include "G4GammaGeneralProcess.hh"
 #include "G4LossTableManager.hh"
 
+#include "G4EventManager.hh"
+#include "SimG4Core/Application/interface/Phase2EventAction.h"
+
+
 Phase2StackingAction::Phase2StackingAction(const edm::ParameterSet& p, const CMSSteppingVerbose* sv)
     : steppingVerbose(sv) {
   trackNeutrino = p.getParameter<bool>("TrackNeutrino");
@@ -167,6 +171,29 @@ Phase2StackingAction::Phase2StackingAction(const edm::ParameterSet& p, const CMS
 }
 
 G4ClassificationOfNewTrack Phase2StackingAction::ClassifyNewTrack(const G4Track* aTrack) {
+  // Alvaro, count secondaries
+  auto ff_update_nsecondaries = [](const G4Track* aTrack) {
+    if (aTrack->GetParentID() <= 0) return;
+
+    const auto* pv = aTrack->GetVolume();
+    if (!pv) return;
+
+    const auto* lv = pv->GetLogicalVolume();
+    if (!lv) return;
+
+    const auto* region = lv->GetRegion();
+    if (!region) return;
+
+    const auto& regionName = region->GetName();
+    if (regionName.find("HGCalRegion") == std::string::npos) return;
+
+    if (auto* eventAction = static_cast<Phase2EventAction*>(
+            G4EventManager::GetEventManager()->GetUserEventAction())) {
+      eventAction->IncreaseSecondaryParticleCounter();
+    }
+  };
+  ff_update_nsecondaries(aTrack);
+
   // G4 interface part
   G4ClassificationOfNewTrack classification = fUrgent;
   const int pdg = aTrack->GetDefinition()->GetPDGEncoding();

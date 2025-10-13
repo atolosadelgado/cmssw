@@ -69,4 +69,8 @@ TmpSimEvent* SimRunInterface::simEvent() {
   return ptr;
 }
 
+int SimRunInterface::getThreadIndex(){
+  return m_runManagerMTWorker->getThreadIndex();
+}
+
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

@@ -42,6 +42,8 @@ public:
 
   TmpSimEvent* simEvent();
 
+  int getThreadIndex();
+
 private:
   RunManagerMT* m_runManagerMT;
   RunManagerMTWorker* m_runManagerMTWorker;

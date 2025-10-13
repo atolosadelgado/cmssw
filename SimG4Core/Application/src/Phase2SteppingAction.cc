@@ -13,6 +13,9 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Utilities/interface/isFinite.h"
 
+#include "G4EventManager.hh"
+#include "SimG4Core/Application/interface/Phase2EventAction.h"
+
 Phase2SteppingAction::Phase2SteppingAction(const CMSSteppingVerbose* sv,
                                            const edm::ParameterSet& p,
                                            bool hasW,
@@ -138,6 +141,50 @@ void Phase2SteppingAction::UserSteppingAction(const G4Step* aStep) {
   if (sAlive == tstat && std::abs(theTrack->GetPosition().z()) >= maxZCentralCMS) {
     tstat = (time > maxTrackTimeForward) ? sOutOfTime : sVeryForward;
   }
+
+  // Alvaro scoring of HGCal
+  auto ff_score_HGCal_energy = [&](const G4Step* aStep) {
+    const auto* preStep = aStep->GetPreStepPoint();
+    const auto* postStep = aStep->GetPostStepPoint();
+
+    const auto* pv = preStep->GetPhysicalVolume();
+    if (!pv) return;
+
+    const auto* lv = pv->GetLogicalVolume();
+    if (!lv) return;
+
+    const auto* region = lv->GetRegion();
+    if (!region) return;
+
+    // score energy only in hgcal
+    if (region->GetName().find("HGCalRegion") == std::string::npos) return;
+
+    // score energy only in sensitive materials
+    const auto* material = lv->GetMaterial();
+    if (!material) return;
+
+    const G4String& matName = material->GetName();
+    if (matName != "Silicon" && matName != "HGCalHEScintillatorSensitive") return;
+
+    // Obtener el EventAction
+    auto* eventAction = static_cast<Phase2EventAction*>(
+        G4EventManager::GetEventManager()->GetUserEventAction());
+    if (!eventAction) return;
+
+    // energy deposited
+    const double edep_MeV = aStep->GetTotalEnergyDeposit() / CLHEP::MeV;
+    if (edep_MeV <= 0.) return;
+
+    // average the position
+    const G4ThreeVector ave_pos = 0.5 * (preStep->GetPosition() + postStep->GetPosition());
+    const double zabs_mm = std::fabs(ave_pos.z() / CLHEP::mm);
+
+    // update energy profile
+    eventAction->Update_HGCaleprofile(zabs_mm, edep_MeV);
+  };
+
+  // call lambda to score energy
+  ff_score_HGCal_energy(aStep);
 
   // check G4Region
   if (sAlive == tstat) {
