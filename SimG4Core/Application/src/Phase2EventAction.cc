@@ -9,6 +9,7 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "Randomize.hh"
+#include "SimG4Core/Application/interface/RunAction.h"
 
 Phase2EventAction::Phase2EventAction(const edm::ParameterSet& p,
                                      SimRunInterface* rm,
@@ -36,6 +37,7 @@ void Phase2EventAction::BeginOfEventAction(const G4Event* anEvent) {
 }
 
 void Phase2EventAction::EndOfEventAction(const G4Event* anEvent) {
+  fRunAction->SecondaryCounterFillHistogramAndReset();
   if (m_printRandom) {
     edm::LogVerbatim("SimG4CoreApplication")
         << "Phase2EventAction::EndOfEventAction: " << anEvent->GetEventID() << " Random number: " << G4UniformRand();

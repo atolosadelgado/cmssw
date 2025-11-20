@@ -448,6 +448,7 @@ void RunManagerMTWorker::initializeUserActions() {
         new Phase2EventAction(m_pEventAction, m_tls->runInterface.get(), m_tls->trackManager.get(), m_sVerbose.get());
     Connect(ptr);
     userEventAction = (G4UserEventAction*)ptr;
+    ptr->SetRunAction( m_tls->userRunAction.get() );
   } else {
     auto ptr = new EventAction(m_pEventAction, m_tls->runInterface.get(), m_tls->trackManager.get(), m_sVerbose.get());
     Connect(ptr);
@@ -460,6 +461,7 @@ void RunManagerMTWorker::initializeUserActions() {
     auto ptr = new Phase2TrackingAction(m_tls->trackManager.get(), m_sVerbose.get(), m_pTrackingAction);
     Connect(ptr);
     userTrackingAction = (G4UserTrackingAction*)ptr;
+    ptr->SetRunAction( m_tls->userRunAction.get() );
   } else {
     auto ptr = new TrackingAction(m_tls->trackManager.get(), m_sVerbose.get(), m_pTrackingAction);
     Connect(ptr);

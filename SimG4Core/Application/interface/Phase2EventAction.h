@@ -24,6 +24,7 @@ class SimRunInterface;
 class BeginOfEvent;
 class EndOfEvent;
 class CMSSteppingVerbose;
+class RunAction;
 
 class Phase2EventAction : public G4UserEventAction {
 public:
@@ -45,7 +46,10 @@ public:
   Phase2EventAction(const Phase2EventAction&) = delete;
   const Phase2EventAction& operator=(const Phase2EventAction&) = delete;
 
+  void SetRunAction(RunAction * aRunAction){fRunAction = aRunAction;}
+
 private:
+  RunAction * fRunAction;
   SimRunInterface* m_runInterface;
   SimTrackManager* m_trackManager;
   CMSSteppingVerbose* m_SteppingVerbose;

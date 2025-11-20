@@ -23,6 +23,7 @@ class BeginOfTrack;
 class EndOfTrack;
 class CMSSteppingVerbose;
 class TrackInformation;
+class RunAction;
 
 class Phase2TrackingAction : public G4UserTrackingAction {
 public:
@@ -41,8 +42,10 @@ public:
 
   Phase2TrackingAction(Phase2TrackingAction&) = delete;
   Phase2TrackingAction& operator=(const Phase2TrackingAction& right) = delete;
+  void SetRunAction(RunAction * aRunAction){fRunAction = aRunAction;}
 
 private:
+  RunAction * fRunAction;
   SimTrackManager* trackManager_;
   CMSG4TrackInterface* trackInterface_;
   CMSSteppingVerbose* steppingVerbose_;

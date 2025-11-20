@@ -13,6 +13,7 @@
 #include "G4UImanager.hh"
 #include "G4TrackingManager.hh"
 #include <CLHEP/Units/SystemOfUnits.h>
+#include "SimG4Core/Application/interface/RunAction.h"
 
 //#define EDM_ML_DEBUG
 
@@ -74,9 +75,12 @@ void Phase2TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
     // Each track with energy above the threshold should be saved
     trkInfo_->putInHistory();
   }
+
+  fRunAction->RegisterCreationOfParticle(aTrack);
 }
 
 void Phase2TrackingAction::PostUserTrackingAction(const G4Track* aTrack) {
+  fRunAction->RegisterEndOfParticle(aTrack);
   // Tracks in history may be upgraded to stored secondary tracks,
   // which cross the boundary between Tracker and Calo
   int id = aTrack->GetTrackID();

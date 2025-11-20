@@ -44,6 +44,10 @@ void RunAction::EndOfRunAction(const G4Run* aRun) {
   std::string ofilename = "test" + std::to_string(ThreadIndex) + ".root";
   TFile * ofile = new TFile( ofilename.c_str() ,"recreate");
   hHGCal_eprofilez->Write();
+  totalSecondaryCounter.WriteHistogram(ofile);
+  gammaSecondaryCounter.WriteHistogram(ofile);
+  electronSecondaryCounter.WriteHistogram(ofile);
+
   ofile->Close();
 
 }

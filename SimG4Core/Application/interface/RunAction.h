@@ -9,6 +9,8 @@
 #include <string>
 #include <memory>
 
+#include "SimG4Core/Application/interface/SecondaryEscapeCounter.h"
+
 class SimRunInterface;
 class BeginOfRun;
 class EndOfRun;
@@ -27,6 +29,25 @@ public:
   SimActivityRegistry::BeginOfRunSignal m_beginOfRunSignal;
   SimActivityRegistry::EndOfRunSignal m_endOfRunSignal;
 
+  void RegisterCreationOfParticle(const G4Track* track)
+  {
+    totalSecondaryCounter.RegisterCreation(track);
+    gammaSecondaryCounter.RegisterCreation(track);
+    electronSecondaryCounter.RegisterCreation(track);
+  }
+  void RegisterEndOfParticle(const G4Track* track)
+  {
+    totalSecondaryCounter.RegisterEnd(track);
+    gammaSecondaryCounter.RegisterEnd(track);
+    electronSecondaryCounter.RegisterEnd(track);
+  }
+
+  void SecondaryCounterFillHistogramAndReset(){
+    totalSecondaryCounter.FillHistogramsAndResetCounters();
+    gammaSecondaryCounter.FillHistogramsAndResetCounters();
+    electronSecondaryCounter.FillHistogramsAndResetCounters();
+  }
+
 private:
   SimRunInterface* m_runInterface;
   std::string m_stopFile;
@@ -35,6 +56,10 @@ private:
   double zmax_zprofile = 6000;
   std::unique_ptr<TH1D> hHGCal_eprofilez;
   bool fIsMaster = {false};
+  SecondaryEscapeCounter totalSecondaryCounter = {""};
+  SecondaryEscapeCounter gammaSecondaryCounter = {"gamma"};
+  SecondaryEscapeCounter electronSecondaryCounter = {"e-"};
+
 };
 
 #endif
