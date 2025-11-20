@@ -53,12 +53,12 @@ process.load('SimG4CMS.Calo.CaloSimHitStudy_cfi')
 process.Timing = cms.Service('Timing')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10) ### NUMER OF EVENTS TO BE SET
+    input = cms.untracked.int32(5) ### NUMER OF EVENTS TO BE SET
 #    input = cms.untracked.int32(50000)
 #     input = cms.untracked.int32(100000)
 )
 
-process.options.numberOfThreads = 5 ### NUMBER OF THREADS TO BE SET
+process.options.numberOfThreads = 4 ### NUMBER OF THREADS TO BE SET
 
 process.source = cms.Source('EmptySource')
 
