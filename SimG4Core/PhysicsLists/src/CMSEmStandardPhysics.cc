@@ -113,6 +113,19 @@ void CMSEmStandardPhysics::ConstructProcess() {
 
   const G4Region* aRegion = G4RegionStore::GetInstance()->GetRegion("HcalRegion", false);
   const G4Region* bRegion = G4RegionStore::GetInstance()->GetRegion("HGCalRegion", false);
+  std::vector<G4Region*> hgcalRegions;
+
+  // fill vector hgcalRegions
+  {
+    G4RegionStore* store = G4RegionStore::GetInstance();
+    auto IsHGCalRegion = [](G4Region* r) {
+      return r && r->GetName().compare(0, 5, "HGCal") == 0;
+    };
+    std::copy_if(store->begin(), store->end(),
+                 std::back_inserter(hgcalRegions),
+                 IsHGCalRegion
+                 );
+  }
 
   if (!fG4HepEmActive) {
     // Add gamma EM Processes
@@ -177,7 +190,10 @@ void CMSEmStandardPhysics::ConstructProcess() {
         transportWithMsc->AddMscModel(msc3, -1, aRegion);
       }
       if (nullptr != bRegion) {
-        transportWithMsc->AddMscModel(msc3, -1, bRegion);
+        // transportWithMsc->AddMscModel(msc3, -1, bRegion);
+        // Alvaro addition, copy physics to subregions of HGCal
+        for( auto r : hgcalRegions)
+          transportWithMsc->AddMscModel(msc3, -1, r);
       }
       procManager->AddProcess(transportWithMsc, -1, 0, 0);
     } else {
@@ -189,7 +205,10 @@ void CMSEmStandardPhysics::ConstructProcess() {
         msc->AddEmModel(-1, msc3, aRegion);
       }
       if (nullptr != bRegion) {
-        msc->AddEmModel(-1, msc3, bRegion);
+        // msc->AddEmModel(-1, msc3, bRegion);
+        // Alvaro addition, copy physics to subregions of HGCal
+        for( auto r : hgcalRegions)
+          msc->AddEmModel(-1, msc3, r);
       }
       ph->RegisterProcess(msc, particle);
     }
@@ -247,7 +266,10 @@ void CMSEmStandardPhysics::ConstructProcess() {
         transportWithMsc->AddMscModel(msc3, -1, aRegion);
       }
       if (nullptr != bRegion) {
-        transportWithMsc->AddMscModel(msc3, -1, bRegion);
+        // transportWithMsc->AddMscModel(msc3, -1, bRegion);
+        for( auto r : hgcalRegions)
+          transportWithMsc->AddMscModel(msc3, -1, r);
+
       }
       procManager->AddProcess(transportWithMsc, -1, 0, 0);
     } else {
@@ -259,7 +281,9 @@ void CMSEmStandardPhysics::ConstructProcess() {
         msc->AddEmModel(-1, msc3, aRegion);
       }
       if (nullptr != bRegion) {
-        msc->AddEmModel(-1, msc3, bRegion);
+        // msc->AddEmModel(-1, msc3, bRegion);
+        for( auto r : hgcalRegions)
+          msc->AddEmModel(-1, msc3, r);
       }
       ph->RegisterProcess(msc, particle);
     }
@@ -306,13 +330,17 @@ void CMSEmStandardPhysics::ConstructProcess() {
 
     if (nullptr != bRegion) {
       // HGCal region
-      const G4String& rname = bRegion->GetName();
-      config->SetMinimalMSCStepLimit(fStepLimitType == fMinimal, rname);
-      config->SetMSCRangeFactor(fRangeFactor, rname);
-      config->SetMSCSafetyFactor(fSafetyFactor, rname);
+      // const G4String& rname = bRegion->GetName();
+      for( auto r : hgcalRegions)
+      {
+        const G4String& rname = r->GetName();
+        config->SetMinimalMSCStepLimit(fStepLimitType == fMinimal, rname);
+        config->SetMSCRangeFactor(fRangeFactor, rname);
+        config->SetMSCSafetyFactor(fSafetyFactor, rname);
 
-      // config->SetWoodcockTrackingRegion(rname);
-      // config->SetWDTEnergyLimit(0.5 * CLHEP::MeV);
+        // config->SetWoodcockTrackingRegion(rname);
+        // config->SetWDTEnergyLimit(0.5 * CLHEP::MeV);
+      }
     }
 
     G4Electron::Electron()->SetTrackingManager(hepEmTM);
