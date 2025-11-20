@@ -9,8 +9,19 @@
 #include <iostream>
 #include <fstream>
 
-RunAction::RunAction(const edm::ParameterSet& p, SimRunInterface* rm, bool)
-    : m_runInterface(rm), m_stopFile(p.getParameter<std::string>("StopFile")) {}
+#include "TH1D.h"
+#include "TFile.h"
+
+RunAction::RunAction(const edm::ParameterSet& p, SimRunInterface* rm, bool master)
+    : m_runInterface(rm), m_stopFile(p.getParameter<std::string>("StopFile")), fIsMaster(master) {
+      hHGCal_eprofilez = std::make_unique<TH1D>("hHGCal_eprofilez",
+                                                "Energy profile;z (mm);E (MeV)",
+                                                nbins_zprofile,
+                                                zmin_zprofile,
+                                                zmax_zprofile
+                                                );
+      hHGCal_eprofilez->SetDirectory(0);
+    }
 
 RunAction::~RunAction() {}
 
@@ -26,4 +37,15 @@ void RunAction::BeginOfRunAction(const G4Run* aRun) {
 void RunAction::EndOfRunAction(const G4Run* aRun) {
   EndOfRun r(aRun);
   m_endOfRunSignal(&r);
+  // if is master, do nothing else
+  if(fIsMaster) return;
+
+  int ThreadIndex = m_runInterface->getThreadIndex();
+  std::string ofilename = "test" + std::to_string(ThreadIndex) + ".root";
+  TFile * ofile = new TFile( ofilename.c_str() ,"recreate");
+  hHGCal_eprofilez->Write();
+  ofile->Close();
+
 }
+
+void RunAction::FillHGCalEprofilez(double zabs_mm, double edep_MeV){hHGCal_eprofilez->Fill(zabs_mm, edep_MeV);}

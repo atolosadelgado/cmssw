@@ -16,6 +16,7 @@
 #include <vector>
 
 class CMSSteppingVerbose;
+class RunAction;
 
 class Phase2SteppingAction : public G4UserSteppingAction {
 public:
@@ -26,8 +27,13 @@ public:
 
   SimActivityRegistry::G4StepSignal m_g4StepSignal;
 
+  void SetRunAction(RunAction * aRunAction){fRunAction = aRunAction;}
+
 private:
+  RunAction * fRunAction;
   bool initPointer();
+  // Alvaro, sum energy in HGCal histogram, owned by run
+  void score_HGCal(const G4Step* aStep);
 
   inline bool isInsideDeadRegion(const G4Region* reg) const;
   inline bool isOutOfTimeWindow(const G4Region* reg, const double& time) const;

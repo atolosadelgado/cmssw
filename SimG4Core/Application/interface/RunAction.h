@@ -7,10 +7,12 @@
 #include "G4UserRunAction.hh"
 
 #include <string>
+#include <memory>
 
 class SimRunInterface;
 class BeginOfRun;
 class EndOfRun;
+class TH1D;
 
 class RunAction : public G4UserRunAction {
 public:
@@ -20,12 +22,19 @@ public:
   void BeginOfRunAction(const G4Run* aRun) override;
   void EndOfRunAction(const G4Run* aRun) override;
 
+  void FillHGCalEprofilez(double zabs_mm, double edep_MeV);
+
   SimActivityRegistry::BeginOfRunSignal m_beginOfRunSignal;
   SimActivityRegistry::EndOfRunSignal m_endOfRunSignal;
 
 private:
   SimRunInterface* m_runInterface;
   std::string m_stopFile;
+  int nbins_zprofile = 180000;
+  double zmin_zprofile = 3000;
+  double zmax_zprofile = 6000;
+  std::unique_ptr<TH1D> hHGCal_eprofilez;
+  bool fIsMaster = {false};
 };
 
 #endif

@@ -473,6 +473,7 @@ void RunManagerMTWorker::initializeUserActions() {
     auto ptr = new Phase2SteppingAction(m_sVerbose.get(), m_pSteppingAction, m_hasWatchers, dd4hep);
     Connect(ptr);
     userSteppingAction = (G4UserSteppingAction*)ptr;
+    ptr->SetRunAction( m_tls->userRunAction.get() );
   } else {
     auto ptr = new SteppingAction(m_sVerbose.get(), m_pSteppingAction, m_hasWatchers, dd4hep);
     Connect(ptr);
