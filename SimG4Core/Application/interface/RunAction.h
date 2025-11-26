@@ -8,6 +8,7 @@
 
 #include <string>
 #include <memory>
+#include <chrono>
 
 #include "SimG4Core/Application/interface/SecondaryEscapeCounter.h"
 
@@ -59,6 +60,7 @@ private:
   SecondaryEscapeCounter totalSecondaryCounter = {""};
   SecondaryEscapeCounter gammaSecondaryCounter = {"gamma"};
   SecondaryEscapeCounter electronSecondaryCounter = {"e-"};
+  std::chrono::high_resolution_clock::time_point t_start, t_end;
 
 };
 

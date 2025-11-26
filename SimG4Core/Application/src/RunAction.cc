@@ -11,6 +11,7 @@
 
 #include "TH1D.h"
 #include "TFile.h"
+#include "TParameter.h"
 
 RunAction::RunAction(const edm::ParameterSet& p, SimRunInterface* rm, bool master)
     : m_runInterface(rm), m_stopFile(p.getParameter<std::string>("StopFile")), fIsMaster(master) {
@@ -32,13 +33,20 @@ void RunAction::BeginOfRunAction(const G4Run* aRun) {
   }
   BeginOfRun r(aRun);
   m_beginOfRunSignal(&r);
+  t_start = std::chrono::high_resolution_clock::now();
 }
 
 void RunAction::EndOfRunAction(const G4Run* aRun) {
+  t_end = std::chrono::high_resolution_clock::now();
+
   EndOfRun r(aRun);
   m_endOfRunSignal(&r);
   // if is master, do nothing else
   if(fIsMaster) return;
+  std::chrono::duration<double> elapsed_sec = t_end - t_start;
+  // double runtime = elapsed_sec.count();  // time, in seconds
+  double runtime_ms =
+    std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count();
 
   int ThreadIndex = m_runInterface->getThreadIndex();
   std::string ofilename = "test" + std::to_string(ThreadIndex) + ".root";
@@ -47,6 +55,8 @@ void RunAction::EndOfRunAction(const G4Run* aRun) {
   totalSecondaryCounter.WriteHistogram(ofile);
   gammaSecondaryCounter.WriteHistogram(ofile);
   electronSecondaryCounter.WriteHistogram(ofile);
+  TParameter<double> p_runtime("RunTime_ms", runtime_ms);
+  p_runtime.Write();
 
   ofile->Close();
 
