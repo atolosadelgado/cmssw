@@ -259,11 +259,11 @@ G4bool CaloSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
   }
   double energy = getEnergyDeposit(aStep);
 
-  // G4EventManager * evtmgr = G4EventManager::GetEventManager();
-  // {
-  //   if(1. != theTrack->GetWeight())
-  //     throw std::runtime_error("CaloSD::ProcessHits. Error, track weight different from 1");
-  // }
+  G4EventManager * evtmgr = G4EventManager::GetEventManager();
+  {
+    if(1. != theTrack->GetWeight())
+      throw std::runtime_error("CaloSD::ProcessHits. Error, track weight different from 1");
+  }
   if("HcalHits" == GetName() )
   {
     G4EventManager * evtmgr = G4EventManager::GetEventManager();

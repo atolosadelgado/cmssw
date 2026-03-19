@@ -166,6 +166,18 @@ StackingAction::StackingAction(const TrackingAction* trka, const edm::ParameterS
 }
 
 G4ClassificationOfNewTrack StackingAction::ClassifyNewTrack(const G4Track* aTrack) {
+  // Alvaro hardcoded flags for debugging
+  // not all fKill status are controled by steering file flags
+  killExtra = false;
+  gRRactive = false;
+  nRRactive = false;
+  killHeavy = false;
+  killGamma = false;
+  killDeltaRay=false;
+  killInCalo=false;
+  killInCaloEfH=false;
+  trackNeutrino=true;
+
   // G4 interface part
   G4ClassificationOfNewTrack classification = fUrgent;
   const int pdg = aTrack->GetDefinition()->GetPDGEncoding();
@@ -206,14 +218,14 @@ G4ClassificationOfNewTrack StackingAction::ClassifyNewTrack(const G4Track* aTrac
 
     } else if (std::abs(aTrack->GetPosition().z()) >= maxZCentralCMS) {
       // very forward secondary
-      if (time > maxTrackTimeForward) {
+      if (false /*time > maxTrackTimeForward*/) {
         classification = fKill;
       } else {
         const G4Track* mother = trackAction->geant4Track();
         MCTruthUtil::secondary(track, *mother, 0);
       }
 
-    } else if (isItOutOfTimeWindow(reg, time)) {
+    } else if (false /*isItOutOfTimeWindow(reg, time)*/) {
       // time window check
       classification = fKill;
 
@@ -228,16 +240,16 @@ G4ClassificationOfNewTrack StackingAction::ClassifyNewTrack(const G4Track* aTrac
 
       // kill tracks in specific regions
       if (isThisRegion(reg, deadRegions)) {
-        classification = fKill;
+        // classification = fKill;
       }
       if (classification != fKill && ke <= limitEnergyForVacuum && isThisRegion(reg, lowdensRegions)) {
-        classification = fKill;
+        // classification = fKill;
 
       } else if (classification != fKill) {
         // very low-energy gamma
-        if (pdg == 22 && killGamma && ke < kmaxGamma) {
-          classification = fKill;
-        }
+        // if (pdg == 22 && killGamma && ke < kmaxGamma) {
+          // classification = fKill;
+        // }
 
         // specific track killing - not for production
         if (killExtra && classification != fKill) {
@@ -360,6 +372,78 @@ G4ClassificationOfNewTrack StackingAction::ClassifyNewTrack(const G4Track* aTrac
   }
   if (nullptr != steppingVerbose) {
     steppingVerbose->stackFilled(aTrack, (classification == fKill));
+  }
+  {
+    if (classification == fKill) {
+      std::ostringstream msg;
+
+      msg << "\n=== StackingAction::ClassifyNewTrack KILL DEBUG ===\n";
+
+      // --- Identificación básica
+      msg << "TrackID: " << aTrack->GetTrackID() << "\n";
+      msg << "ParentID: " << aTrack->GetParentID() << "\n";
+
+      // --- Partícula
+      const G4ParticleDefinition* pd = aTrack->GetDefinition();
+      msg << "Particle: " << pd->GetParticleName() << "\n";
+      msg << "PDG ID: " << pd->GetPDGEncoding() << "\n";
+
+      // --- Energía
+      msg << "Kinetic Energy (MeV): " << aTrack->GetKineticEnergy() / CLHEP::MeV << "\n";
+      msg << "Total Energy (MeV): " << aTrack->GetTotalEnergy() / CLHEP::MeV << "\n";
+
+      // --- Tiempo
+      msg << "Global Time (ns): " << aTrack->GetGlobalTime() / CLHEP::ns << "\n";
+      msg << "Local Time (ns): " << aTrack->GetLocalTime() / CLHEP::ns << "\n";
+
+      // --- Posición
+      auto pos = aTrack->GetPosition();
+      msg << "Position (mm): ("
+          << pos.x()/CLHEP::mm << ", "
+          << pos.y()/CLHEP::mm << ", "
+          << pos.z()/CLHEP::mm << ")\n";
+
+      // --- Momento
+      auto mom = aTrack->GetMomentumDirection();
+      msg << "Momentum dir: ("
+          << mom.x() << ", "
+          << mom.y() << ", "
+          << mom.z() << ")\n";
+
+      // // --- Volumen / región
+      // if (aTrack->GetVolume()) {
+      //   msg << "Volume: " << aTrack->GetVolume()->GetName() << "\n";
+      // }
+      // if (aTrack->GetLogicalVolumeAtVertex()) {
+      //   msg << "LV at vertex: "
+      //       << aTrack->GetLogicalVolumeAtVertex()->GetName() << "\n";
+      // }
+      //
+      // if (aTrack->GetMaterial()) {
+      //   msg << "Material: " << aTrack->GetMaterial()->GetName() << "\n";
+      // }
+      //
+      // // --- Región (clave para CMS)
+      // if (aTrack->GetVolume() &&
+      //     aTrack->GetVolume()->GetLogicalVolume() &&
+      //     aTrack->GetVolume()->GetLogicalVolume()->GetRegion()) {
+      //   msg << "Region: "
+      //       << aTrack->GetVolume()->GetLogicalVolume()->GetRegion()->GetName()
+      //       << "\n";
+      // }
+      //
+      // // --- Proceso creador (MUY IMPORTANTE)
+      // if (aTrack->GetCreatorProcess()) {
+      //   msg << "Creator process: "
+      //       << aTrack->GetCreatorProcess()->GetProcessName() << "\n";
+      // } else {
+      //   msg << "Creator process: PRIMARY or NONE\n";
+      // }
+
+      msg << "===============================================\n";
+
+      throw std::runtime_error(msg.str());
+    }
   }
   return classification;
 }
