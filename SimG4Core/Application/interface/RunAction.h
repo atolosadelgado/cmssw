@@ -26,6 +26,7 @@ public:
 private:
   SimRunInterface* m_runInterface;
   std::string m_stopFile;
+  std::string m_outputFile;
 };
 
 #endif

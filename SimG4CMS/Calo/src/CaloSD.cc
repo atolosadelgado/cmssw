@@ -22,8 +22,11 @@
 #include "G4GFlashSpot.hh"
 #include "G4ParticleTable.hh"
 #include "G4PhysicalConstants.hh"
+#include "G4EventManager.hh"
 
 #include <CLHEP/Units/SystemOfUnits.h>
+
+#include "SimG4Core/Application/interface/EventAction.h"
 
 #include <fstream>
 #include <memory>
@@ -255,6 +258,26 @@ G4bool CaloSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
     return false;
   }
   double energy = getEnergyDeposit(aStep);
+
+  // G4EventManager * evtmgr = G4EventManager::GetEventManager();
+  // {
+  //   if(1. != theTrack->GetWeight())
+  //     throw std::runtime_error("CaloSD::ProcessHits. Error, track weight different from 1");
+  // }
+  if("HcalHits" == GetName() )
+  {
+    G4EventManager * evtmgr = G4EventManager::GetEventManager();
+    EventAction * evt =static_cast<EventAction*>(evtmgr->GetUserEventAction());
+    evt->atd_hcal_energy += energy;
+    evt->atd_hcal_energy_raw += aStep->GetTotalEnergyDeposit() * theTrack->GetWeight();
+  }
+  else if("EcalHitsEB" == GetName() )
+  {
+    G4EventManager * evtmgr = G4EventManager::GetEventManager();
+    EventAction * evt =static_cast<EventAction*>(evtmgr->GetUserEventAction());
+    evt->atd_ecal_energy += energy;
+    evt->atd_ecal_energy_raw += aStep->GetTotalEnergyDeposit() * theTrack->GetWeight();
+  }
   if (energy <= 0.0) {
     return false;
   }

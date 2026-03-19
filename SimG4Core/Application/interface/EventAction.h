@@ -36,6 +36,10 @@ public:
   SimActivityRegistry::BeginOfEventSignal m_beginOfEventSignal;
   SimActivityRegistry::EndOfEventSignal m_endOfEventSignal;
 
+  double atd_ecal_energy;
+  double atd_ecal_energy_raw;
+  double atd_hcal_energy;
+  double atd_hcal_energy_raw;
 private:
   SimRunInterface* m_runInterface;
   SimTrackManager* m_trackManager;

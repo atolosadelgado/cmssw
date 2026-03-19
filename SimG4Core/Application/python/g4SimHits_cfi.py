@@ -293,7 +293,8 @@ g4SimHits = cms.EDProducer("OscarMTProducer",
         )
     ),
     RunAction = cms.PSet(
-        StopFile = cms.string('')
+        StopFile = cms.string(''),
+        outputFile = cms.string("")
     ),
     EventAction = cms.PSet(
         debug = cms.untracked.bool(False),

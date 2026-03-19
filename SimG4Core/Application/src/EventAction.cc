@@ -10,6 +10,9 @@
 
 #include "Randomize.hh"
 
+#include "G4AnalysisManager.hh"
+
+
 EventAction::EventAction(const edm::ParameterSet& p,
                          SimRunInterface* rm,
                          SimTrackManager* iManager,
@@ -22,6 +25,10 @@ EventAction::EventAction(const edm::ParameterSet& p,
       m_debug(p.getUntrackedParameter<bool>("debug", false)) {}
 
 void EventAction::BeginOfEventAction(const G4Event* anEvent) {
+  atd_ecal_energy = 0;
+  atd_ecal_energy_raw = 0;
+  atd_hcal_energy = 0;
+  atd_hcal_energy_raw = 0;
   BeginOfEvent e(anEvent);
   m_beginOfEventSignal(&e);
 
@@ -36,6 +43,17 @@ void EventAction::BeginOfEventAction(const G4Event* anEvent) {
 }
 
 void EventAction::EndOfEventAction(const G4Event* anEvent) {
+  // std::cout << "EventACtion::EndOfEventAction: " << anEvent->GetEventID() << std::endl;
+  // std::cout << "\t atd_ecal_energy : " <<  atd_ecal_energy << std::endl;
+  // std::cout << "\t atd_hcal_energy : " <<  atd_hcal_energy << std::endl;
+  // std::cout << "\t atd_ecal_energy_raw : " <<  atd_ecal_energy_raw << std::endl;
+  // std::cout << "\t atd_hcal_energy_raw : " <<  atd_hcal_energy_raw << std::endl;
+  auto analysisManager = G4AnalysisManager::Instance();
+  analysisManager->FillNtupleDColumn(0, atd_ecal_energy);
+  analysisManager->FillNtupleDColumn(1, atd_hcal_energy);
+  analysisManager->FillNtupleDColumn(2, atd_ecal_energy_raw );
+  analysisManager->FillNtupleDColumn(3, atd_hcal_energy_raw );
+  analysisManager->AddNtupleRow();
   if (m_printRandom) {
     edm::LogVerbatim("SimG4CoreApplication")
         << "EventACtion::EndOfEventAction: " << anEvent->GetEventID() << " Random number: " << G4UniformRand();
