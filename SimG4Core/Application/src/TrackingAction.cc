@@ -11,6 +11,7 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "G4UImanager.hh"
+#include "G4AnalysisManager.hh"
 #include "G4TrackingManager.hh"
 #include <CLHEP/Units/SystemOfUnits.h>
 
@@ -37,6 +38,17 @@ TrackingAction::TrackingAction(SimTrackManager* stm, CMSSteppingVerbose* sv, con
 }
 
 void TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
+
+  {
+    int hID = GetParticleHistoID(aTrack);
+    double e0 = aTrack->GetVertexKineticEnergy();
+    int modelIndex = aTrack->GetCreatorModelIndex();
+
+    auto analysisManager = G4AnalysisManager::Instance();
+    analysisManager->FillH2(hID, std::log10(e0) ,modelIndex);
+  }
+
+
   g4Track_ = aTrack;
   currentTrack_ = new TrackWithHistory(aTrack, aTrack->GetParentID());
 
@@ -75,6 +87,20 @@ void TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
 }
 
 void TrackingAction::PostUserTrackingAction(const G4Track* aTrack) {
+
+  {
+    int hIDef = GetParticleHistoID(aTrack)+1;
+    int hIDtf = hIDef+1;
+    double ef = aTrack->GetKineticEnergy();
+    double tf = aTrack->GetLocalTime();
+    int modelIndex = aTrack->GetCreatorModelIndex();
+
+    auto analysisManager = G4AnalysisManager::Instance();
+    analysisManager->FillH2(hIDef, std::log10(ef) ,modelIndex);
+    analysisManager->FillH2(hIDtf, std::log10(tf) ,modelIndex);
+  }
+
+
   // Tracks in history may be upgraded to stored secondary tracks,
   // which cross the boundary between Tracker and Calo
   int id = aTrack->GetTrackID();

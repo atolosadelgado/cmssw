@@ -6,8 +6,10 @@
 
 #include "G4UserTrackingAction.hh"
 #include "G4Region.hh"
+#include "G4Track.hh"
 
 #include <vector>
+#include <map>
 
 class SimTrackManager;
 class TrackWithHistory;
@@ -44,6 +46,22 @@ private:
   double ekinMin_;
   std::vector<double> ekinMinRegion_;
   std::vector<G4Region*> ptrRegion_;
+  std::map<int,int> pdgID_to_histoID_map = { {11,0},
+                                             {22,3},
+                                             {2112,6},
+                                             {211,9},
+                                             {-211,12},
+                                             {111,15},
+                                             {2212,18},
+                                             {0,21}
+                                            };
+  double GetParticleHistoID(const G4Track * track) const {
+      int pdgID = track->GetParticleDefinition()->GetPDGEncoding();
+      auto particleInformation = pdgID_to_histoID_map.find(pdgID);
+      if( pdgID_to_histoID_map.end() == particleInformation )
+        return (--particleInformation)->second;
+      else
+        return particleInformation->second;
+    }
 };
-
 #endif

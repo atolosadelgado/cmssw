@@ -10,6 +10,7 @@
 #include <fstream>
 
 #include "G4AnalysisManager.hh"
+#include "G4PhysicsModelCatalog.hh"
 
 RunAction::RunAction(const edm::ParameterSet& p, SimRunInterface* rm, bool)
     : m_runInterface(rm), m_stopFile(p.getParameter<std::string>("StopFile")), m_outputFile(p.getParameter<std::string>("outputFile")) {
@@ -44,7 +45,32 @@ void RunAction::BeginOfRunAction(const G4Run* aRun) {
   analysisManager->FinishNtuple();
   analysisManager->SetFileName(m_outputFile);
   analysisManager->OpenFile(); // name set in macrofile
+  // create histograms of initial and final energy, and lifetime of particles
+  {
+      int nmodels = G4PhysicsModelCatalog::Entries();
+      std::vector<std::pair<int, G4String>> particles = {
+            {11,   "electron"},   // e-
+            {22,   "gamma"},
+            {2112, "neutron"},
+            {211,  "piPlus"},
+            {-211, "piMinus"},
+            {111,  "pi0"},
+            {2212, "proton"},
+            {0, "others"}
 
+      };
+      for (const auto& [pdg, name] : particles) {
+            analysisManager->CreateH2(
+                "hE0_" + name, "", 2500, -15, 10, nmodels, 0, nmodels);
+
+            analysisManager->CreateH2(
+                "hEf_" + name, "", 2500, -15, 10, nmodels, 0, nmodels);
+
+            analysisManager->CreateH2(
+                "hTf_" + name, "", 2500, -15, 10, nmodels, 0, nmodels);
+
+      }
+  } // end create histograms
 }
 
 void RunAction::EndOfRunAction(const G4Run* aRun) {
