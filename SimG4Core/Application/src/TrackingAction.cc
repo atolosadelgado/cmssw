@@ -14,8 +14,15 @@
 #include "G4AnalysisManager.hh"
 #include "G4TrackingManager.hh"
 #include <CLHEP/Units/SystemOfUnits.h>
-
+#include "G4MaterialCutsCouple.hh"
 //#define EDM_ML_DEBUG
+#include "G4RegionStore.hh"
+#include "G4Threading.hh"
+#include "G4Proton.hh"
+#include "G4Neutron.hh"
+#include "G4PionPlus.hh"
+#include "G4PionMinus.hh"
+#include "G4PionZero.hh"
 
 TrackingAction::TrackingAction(SimTrackManager* stm, CMSSteppingVerbose* sv, const edm::ParameterSet& p)
     : trackManager_(stm),
@@ -38,17 +45,6 @@ TrackingAction::TrackingAction(SimTrackManager* stm, CMSSteppingVerbose* sv, con
 }
 
 void TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
-
-  {
-    int hID = GetParticleHistoID(aTrack);
-    double e0 = aTrack->GetVertexKineticEnergy();
-    int modelIndex = aTrack->GetCreatorModelIndex();
-
-    auto analysisManager = G4AnalysisManager::Instance();
-    analysisManager->FillH2(hID, std::log10(e0) ,modelIndex);
-  }
-
-
   g4Track_ = aTrack;
   currentTrack_ = new TrackWithHistory(aTrack, aTrack->GetParentID());
 
@@ -85,20 +81,63 @@ void TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
     trkInfo_->putInHistory();
   }
 }
-
+#include "G4RegionStore.hh"
+#include "G4Proton.hh"
 void TrackingAction::PostUserTrackingAction(const G4Track* aTrack) {
 
-  {
-    int hIDef = GetParticleHistoID(aTrack)+1;
-    int hIDtf = hIDef+1;
+  auto ff_myscoring = [&](const G4Track* aTrack){
+    trackIDmap[aTrack->GetTrackID()] = {aTrack->GetParticleDefinition(), aTrack->GetVertexKineticEnergy()};
+
+    // if no creator process, return early
+    if(0 == aTrack->GetParentID() ) return;
+    const G4VProcess * track_creator_process = aTrack->GetCreatorProcess();
+    if (nullptr == track_creator_process) return;
+    G4RegionStore * regionStore = G4RegionStore::GetInstance();
+    auto * fRegionEcal = regionStore->FindOrCreateRegion("EcalRegion");
+    auto * fRegionHcal = regionStore->FindOrCreateRegion("HcalRegion");
+    auto * trackRegion = aTrack->GetLogicalVolumeAtVertex()->GetRegion();
+    if(trackRegion != fRegionEcal && trackRegion != fRegionHcal )
+        return;
+
+    int hIDe0 = this->GetParticleHistoID(aTrack);
+    int hIDe0_n = hIDe0 + 1;
+    int hIDe0_pi= hIDe0 + 2;
+    int hIDef = hIDe0+3;
+    int hIDtf = hIDe0+4;
+    double e0 = aTrack->GetVertexKineticEnergy();
     double ef = aTrack->GetKineticEnergy();
     double tf = aTrack->GetLocalTime();
-    int modelIndex = aTrack->GetCreatorModelIndex();
+
+    int pindex = 0;
+    auto procIt = fProcNameId.find(track_creator_process->GetProcessName());
+    if(fProcNameId.end() == procIt ){
+        //std::cerr << "\tAlvaro warning: creator process name <"
+        //          << track_creator_process->GetProcessName()
+        //          << "> not found in fProcNameId" << std::endl;
+        pindex = 0;
+    }
+    else
+        pindex = procIt->second + 1;
 
     auto analysisManager = G4AnalysisManager::Instance();
-    analysisManager->FillH2(hIDef, std::log10(ef) ,modelIndex);
-    analysisManager->FillH2(hIDtf, std::log10(tf) ,modelIndex);
-  }
+    analysisManager->FillH2(hIDe0, std::log10(e0) ,pindex);
+    if(auto it = trackIDmap.find(aTrack->GetParentID()); it != trackIDmap.end()){
+        if(G4Neutron::Neutron() == it->second.first)
+        {
+            analysisManager->FillH2(hIDe0_n, std::log10(e0) ,pindex);
+        }
+        else if(G4PionMinus::PionMinus() == it->second.first ||
+                G4PionPlus::PionPlus() == it->second.first ||
+                G4PionZero::PionZero() == it->second.first
+                )
+        {
+            analysisManager->FillH2(hIDe0_pi, std::log10(e0) ,pindex);
+        }
+    }
+    analysisManager->FillH2(hIDef, std::log10(ef) ,pindex);
+    analysisManager->FillH2(hIDtf, std::log10(tf) ,pindex);
+  };
+  ff_myscoring(aTrack);
 
 
   // Tracks in history may be upgraded to stored secondary tracks,

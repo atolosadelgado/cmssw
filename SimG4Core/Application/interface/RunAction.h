@@ -23,6 +23,8 @@ public:
   SimActivityRegistry::BeginOfRunSignal m_beginOfRunSignal;
   SimActivityRegistry::EndOfRunSignal m_endOfRunSignal;
 
+  void PrintGeant4Configuration();
+
 private:
   SimRunInterface* m_runInterface;
   std::string m_stopFile;
