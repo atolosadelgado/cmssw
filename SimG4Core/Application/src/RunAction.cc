@@ -63,14 +63,14 @@ void RunAction::BeginOfRunAction(const G4Run* aRun) {
       int id = 0;
       for (const auto& [pdg, name] : particles) {
             id = analysisManager->CreateH2(
-                "hE0_" + name, "", 1000, -10, 10, nmodels+1, -1, nmodels);
+                "hE0_" + name, "", 1000, -5, 5, nmodels+1, -1, nmodels);
             histovector.push_back({"hE0_" + name, id});
             id = analysisManager->CreateH2(
-                "hE0_" + name + "_n", "", 1000, -10, 10, nmodels+1, -1, nmodels);
+                "hE0_" + name + "_n", "", 1000, -5, 5, nmodels+1, -1, nmodels);
 
             histovector.push_back({"hE0_" + name + "_n", id});
             id = analysisManager->CreateH2(
-                "hE0_" + name + "_pi", "", 1000, -10, 10, nmodels+1, -1, nmodels);
+                "hE0_" + name + "_pi", "", 1000, -5, 5, nmodels+1, -1, nmodels);
 
             histovector.push_back({"hE0_" + name + "_pi", id});
 
