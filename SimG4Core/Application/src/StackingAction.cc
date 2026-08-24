@@ -166,6 +166,21 @@ StackingAction::StackingAction(const edm::ParameterSet& p, const CMSSteppingVerb
 }
 
 G4ClassificationOfNewTrack StackingAction::ClassifyNewTrack(const G4Track* aTrack) {
+
+  constexpr bool debugNoKilling = true;
+
+  if (debugNoKilling) {
+    killExtra = false;
+    gRRactive = false;
+    nRRactive = false;
+    killHeavy = false;
+    killGamma = false;
+    killDeltaRay = false;
+    killInCalo = false;
+    killInCaloEfH = false;
+    trackNeutrino = true;
+  }
+
   // G4 interface part
   G4ClassificationOfNewTrack classification = fUrgent;
   const int pdg = aTrack->GetDefinition()->GetPDGEncoding();
@@ -206,14 +221,14 @@ G4ClassificationOfNewTrack StackingAction::ClassifyNewTrack(const G4Track* aTrac
 
     } else if (std::abs(aTrack->GetPosition().z()) >= maxZCentralCMS) {
       // very forward secondary
-      if (time > maxTrackTimeForward) {
+      if (false /*time > maxTrackTimeForward*/) {
         classification = fKill;
       } else {
         const G4Track* mother = m_trackInterface->getCurrentTrack();
         MCTruthUtil::secondary(track, mother, 0);
       }
 
-    } else if (isItOutOfTimeWindow(reg, time)) {
+    } else if (false /*isItOutOfTimeWindow(reg, time)*/) {
       // time window check
       classification = fKill;
 
@@ -228,16 +243,16 @@ G4ClassificationOfNewTrack StackingAction::ClassifyNewTrack(const G4Track* aTrac
 
       // kill tracks in specific regions
       if (isThisRegion(reg, deadRegions)) {
-        classification = fKill;
+        // classification = fKill;
       }
       if (classification != fKill && ke <= limitEnergyForVacuum && isThisRegion(reg, lowdensRegions)) {
-        classification = fKill;
+        // classification = fKill;
 
       } else if (classification != fKill) {
         // very low-energy gamma
-        if (pdg == 22 && killGamma && ke < kmaxGamma) {
-          classification = fKill;
-        }
+        // if (pdg == 22 && killGamma && ke < kmaxGamma) {
+          // classification = fKill;
+        // }
 
         // specific track killing - not for production
         if (killExtra && classification != fKill) {

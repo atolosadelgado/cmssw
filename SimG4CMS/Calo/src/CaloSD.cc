@@ -195,7 +195,10 @@ void CaloSD::newCollection(const std::string& name, edm::ParameterSet const& p) 
 G4bool CaloSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
   NaNTrap(aStep);
   ignoreReject = false;
-
+  {
+    if(1. == theTrack->GetWeight())
+      throw std::runtime_error("CaloSD::ProcessHits. Error, track weight different from 1");
+  }
 #ifdef EDM_ML_DEBUG
   edm::LogVerbatim("CaloSim") << "CaloSD::" << GetName() << " ID= " << aStep->GetTrack()->GetTrackID()
                               << " prID= " << aStep->GetTrack()->GetParentID()

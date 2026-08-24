@@ -134,62 +134,72 @@ void SteppingAction::UserSteppingAction(const G4Step* aStep) {
     tstat = (time > maxTrackTimeForward) ? sOutOfTime : sVeryForward;
   }
 
-  // check G4Region
-  if (sAlive == tstat || sVeryForward == tstat) {
-    // next logical volume and next region
-    const G4LogicalVolume* lv = postStep->GetPhysicalVolume()->GetLogicalVolume();
-    const G4Region* theRegion = lv->GetRegion();
-
-    // kill in dead regions except CMStoZDC volume
-    if (isInsideDeadRegion(theRegion) && !isForZDC(lv, std::abs(theTrack->GetParticleDefinition()->GetPDGEncoding()))) {
-      tstat = sDeadRegion;
-    }
-
-    // kill particles leaving ZDC
-    if (sAlive == sVeryForward && m_CMStoZDCtransport) {
-      const G4Region* preRegion = preStep->GetPhysicalVolume()->GetLogicalVolume()->GetRegion();
-      if (preRegion == m_ZDCRegion && preRegion != theRegion)
-        tstat = sDeadRegion;
-    }
-
-    // kill out of time
-    if (sAlive == tstat) {
-      if (isOutOfTimeWindow(theRegion, time))
-        tstat = sOutOfTime;
-    }
-
-    // kill low-energy in volumes on demand
-    if (sAlive == tstat && numberEkins > 0) {
-      if (isLowEnergy(lv, theTrack))
-        tstat = sLowEnergy;
-    }
-
-    // kill low-energy in vacuum
-    if (sAlive == tstat && killBeamPipe) {
-      if (ekin < theCriticalEnergyForVacuum && theTrack->GetDefinition()->GetPDGCharge() != 0.0 &&
-          lv->GetMaterial()->GetDensity() <= theCriticalDensity) {
-        tstat = sLowEnergyInVacuum;
-      }
-    }
-  }
+  // // check G4Region
+  // if (sAlive == tstat || sVeryForward == tstat) {
+  //   // next logical volume and next region
+  //   const G4LogicalVolume* lv = postStep->GetPhysicalVolume()->GetLogicalVolume();
+  //   const G4Region* theRegion = lv->GetRegion();
+  //
+  //   // kill in dead regions except CMStoZDC volume
+  //   if (isInsideDeadRegion(theRegion) && !isForZDC(lv, std::abs(theTrack->GetParticleDefinition()->GetPDGEncoding()))) {
+  //     tstat = sDeadRegion;
+  //   }
+  //
+  //   // kill particles leaving ZDC
+  //   if (sAlive == sVeryForward && m_CMStoZDCtransport) {
+  //     const G4Region* preRegion = preStep->GetPhysicalVolume()->GetLogicalVolume()->GetRegion();
+  //     if (preRegion == m_ZDCRegion && preRegion != theRegion)
+  //       tstat = sDeadRegion;
+  //   }
+  //
+  //   // kill out of time
+  //   if (sAlive == tstat) {
+  //     if (isOutOfTimeWindow(theRegion, time))
+  //       tstat = sOutOfTime;
+  //   }
+  //
+  //   // kill low-energy in volumes on demand
+  //   if (sAlive == tstat && numberEkins > 0) {
+  //     if (isLowEnergy(lv, theTrack))
+  //       tstat = sLowEnergy;
+  //   }
+  //
+  //   // kill low-energy in vacuum
+  //   if (sAlive == tstat && killBeamPipe) {
+  //     if (ekin < theCriticalEnergyForVacuum && theTrack->GetDefinition()->GetPDGCharge() != 0.0 &&
+  //         lv->GetMaterial()->GetDensity() <= theCriticalDensity) {
+  //       tstat = sLowEnergyInVacuum;
+  //     }
+  //   }
+  // }
   // check transition tracker/calo
-  bool isKilled = false;
-  if (sAlive == tstat || sVeryForward == tstat) {
-    if (preStep->GetPhysicalVolume() == tracker && postStep->GetPhysicalVolume() == calo) {
-      TrackInformation* trkinfo = dynamic_cast<TrackInformation*>(theTrack->GetUserInformation());
-      if (nullptr != trkinfo && !trkinfo->crossedBoundary()) {
-        trkinfo->setCrossedBoundary(theTrack);
-      }
-    }
-  } else {
-    theTrack->SetTrackStatus(fStopAndKill);
-    isKilled = true;
-#ifdef EDM_ML_DEBUG
-    PrintKilledTrack(theTrack, tstat);
-#endif
-  }
-  if (nullptr != steppingVerbose) {
-    steppingVerbose->nextStep(aStep, fpSteppingManager, isKilled);
+//   bool isKilled = false;
+//   if (sAlive == tstat || sVeryForward == tstat) {
+//     if (preStep->GetPhysicalVolume() == tracker && postStep->GetPhysicalVolume() == calo) {
+//       TrackInformation* trkinfo = dynamic_cast<TrackInformation*>(theTrack->GetUserInformation());
+//       if (nullptr != trkinfo && !trkinfo->crossedBoundary()) {
+//         trkinfo->setCrossedBoundary(theTrack);
+//       }
+//     }
+//   } else {
+//     theTrack->SetTrackStatus(fStopAndKill);
+//     isKilled = true;
+// #ifdef EDM_ML_DEBUG
+//     PrintKilledTrack(theTrack, tstat);
+// #endif
+//   }
+//   if (nullptr != steppingVerbose) {
+//     steppingVerbose->nextStep(aStep, fpSteppingManager, isKilled);
+//   }
+
+  if (theTrack->GetTrackStatus() == fStopAndKill) {
+          std::ostringstream msg;
+          msg << "KILLED IN STEPPING: "
+                << theTrack->GetDefinition()->GetParticleName()
+                << " E=" << theTrack->GetKineticEnergy()
+                << " time=" << theTrack->GetGlobalTime()
+                << "\n";
+        throw std::runtime_error(msg.str());
   }
 }
 
